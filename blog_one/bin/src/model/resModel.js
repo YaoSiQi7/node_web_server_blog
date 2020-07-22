@@ -13,7 +13,7 @@ class BaseModel {
       data=null
       msg=null
     }
-    if(mag){
+    if(msg){
       this.msg=msg
     }
     if(data){
@@ -22,7 +22,7 @@ class BaseModel {
   }
 }
 class SuccessModel extends BaseModel{
-  constructor(data,mag){
+  constructor(data,msg){
     super(data,msg)
     this.code = 0
   }
