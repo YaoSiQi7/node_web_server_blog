@@ -1,7 +1,7 @@
 /*
  * @Author: 147
  * @Date: 2020-07-15 09:38:43
- * @LastEditTime: 2020-07-16 03:26:30
+ * @LastEditTime: 2020-07-28 17:54:27
  * @LastEditors: Please set LastEditors
  * @Description: server business
  * @FilePath: \node_web_server_blog\blog_one\app.js
@@ -18,13 +18,14 @@ const getPostData = function (req) {
       return
     }
     //发送的数据不是json格式
-    if (req.heardes["Content-type"] !== "application/json") {
+    if (req.headers["content-type"] !== "application/json") {
       resolve({})
       return
     }
+
     let reqData = "";
-    req.on("data", chunk => {
-      reqData += chunk.toString()
+    req.on("data", trunk => {
+      reqData += trunk.toString()
     })
     req.on("end", () => {
       if (!reqData) {
@@ -48,15 +49,20 @@ const serverHandle = (req, res) => {
     //解析query
     req.query = querystring.parse(url.split('?')[1])
     //处理blog路由
-    const blogData = HandleBlogRouter(req, res)
-    if (blogData) {
-      res.end(JSON.stringify(blogData))
+    //blogResult是一个promide对象
+    const blogResult = HandleBlogRouter(req, res)
+    if (blogResult) {
+      blogResult.then(blogData => {
+        res.end(JSON.stringify(blogData))
+      })
       return
     }
     //处理user路由
-    const userData = HandleUserRouter(req, res)
-    if (userData) {
-      res.end(JSON.stringify(userData))
+    const userResult = HandleUserRouter(req, res)
+    if (userResult) {
+      userResult.then(userData => {
+        res.end(JSON.stringify(userData))
+      })
       return
     }
     //404
