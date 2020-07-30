@@ -1,7 +1,7 @@
 /*
  * @Author: 147
  * @Date: 2020-07-15 09:38:43
- * @LastEditTime: 2020-07-28 17:54:27
+ * @LastEditTime: 2020-07-30 13:40:57
  * @LastEditors: Please set LastEditors
  * @Description: server business
  * @FilePath: \node_web_server_blog\blog_one\app.js
@@ -9,6 +9,13 @@
 const querystring = require("querystring")
 const HandleUserRouter = require("./bin/src/router/user")
 const HandleBlogRouter = require("./bin/src/router/blog")
+const getCookieExpires = () => {
+  const d = new Date()
+  d.setTime(d.getTime() + (24 * 60 * 60 * 1000))
+  return d.toGMTString()
+}
+//session数据
+const SESSION_DATA = {}
 //处理post请求
 const getPostData = function (req) {
   const promise = new Promise((resolve, reject) => {
@@ -26,7 +33,7 @@ const getPostData = function (req) {
     let reqData = "";
     req.on("data", trunk => {
       reqData += trunk.toString()
-    })
+    })                                                                                                                                   
     req.on("end", () => {
       if (!reqData) {
         resolve({})
@@ -48,11 +55,38 @@ const serverHandle = (req, res) => {
     req.body = postData
     //解析query
     req.query = querystring.parse(url.split('?')[1])
+    //解析cookie
+    req.cookie = {}
+    const cookieStr = req.headers.cookie || ""
+    cookieStr.split(";").forEach(item => {
+      if (!item) {
+        return
+      }
+      const arr = item.split("=")
+      let key = arr[0].trim()
+      let value = arr[1].trim()
+      req.cookie[key] = value
+    });
+    //解析session
+    let needSetCookie = false
+    let userId = req.cookie.userid
+    if (userId) {
+      if (!SESSION_DATA[userId]) {
+        SESSION_DATA[userId] = {}
+      } 
+    }else {
+      needSetCookie = true
+      userId = `${Date.now()}_${Math.random()}`
+      SESSION_DATA[userId] = {}
+    }
+    req.session = SESSION_DATA[userId]
     //处理blog路由
-    //blogResult是一个promide对象
     const blogResult = HandleBlogRouter(req, res)
     if (blogResult) {
       blogResult.then(blogData => {
+        if (needSetCookie) {
+          res.setHeader('Set-Cookie', `userid=${userId};path=/;expires=${getCookieExpires()}`)
+        }
         res.end(JSON.stringify(blogData))
       })
       return
@@ -61,6 +95,9 @@ const serverHandle = (req, res) => {
     const userResult = HandleUserRouter(req, res)
     if (userResult) {
       userResult.then(userData => {
+        if (needSetCookie) {
+          res.setHeader('Set-Cookie', `userid=${userId};path=/;expires=${getCookieExpires()}`)
+        }
         res.end(JSON.stringify(userData))
       })
       return
